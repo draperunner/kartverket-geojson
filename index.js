@@ -3,13 +3,7 @@ const fetch = require('node-fetch')
 
 const ELEVATION_HOST = 'https://wms.geonorge.no/skwms1/wps.elevation2'
 const SSR_HOST = 'https://ws.geonorge.no/SKWS3Index/v2/ssr/sok'
-
-function geoDiff(stedsnavn, lat, lon) {
-    const { aust, nord } = stedsnavn
-    const lat2 = Number(nord._text)
-    const lon2 = Number(aust._text)
-    return (lat - lat2)**2 + (lon - lon2)**2
-}
+const KOMMUNEINFO_HOST = 'https://ws.geonorge.no/kommuneinfo/v1'
 
 async function parseSsrResponse(response) {
     const xml = await response.text()
@@ -27,54 +21,56 @@ async function getAltitude(lat, lon, epsg = '4258') {
             return [d['ows:Title']._text, d['wps:Data']['wps:LiteralData']._text]
         });
 
-        return dataArray.reduce((obj, [key, value]) => ({
+        const dataObject = dataArray.reduce((obj, [key, value]) => ({
             ...obj,
             [key]: value === 'None' ? undefined : value
         }), {})
+
+        return {
+            ...dataObject,
+            elevation: !isNaN(dataObject.elevation) ? Number(dataObject.elevation) : undefined
+        }
     } catch (error) {
         return {}
     }
 }
 
-async function getInfo(lat, lon, epsg = '4258') {
+async function getCountyAndMunicipality(lat, lon, epsg = '4258') {
     try {
-        const res = await fetch(`${SSR_HOST}?nordLL=${lat - 0.01}&nordUR=${lat + 0.01}&ostLL=${lon - 0.01}&ostUR=${lon + 0.01}&eksakteForst=true&antPerSide=15&epsgKode=${epsg}&side=0`)
-        const data = await parseSsrResponse(res)
-        data.sort((a, b) => geoDiff(a, lat, lon) - geoDiff(b, lat, lon))
-        const info = data[0]
+        const res = await fetch(`${KOMMUNEINFO_HOST}/punkt?nord=${lat}&ost=${lon}&koordsys=${epsg}`)
+        const { fylkesnavn, kommunenavn } = await res.json()
         return {
-            county: info.fylkesnavn._text,
-            municipality: info.kommunenavn._text,
-            nameType: info.navnetype._text,
-            placeName: info.stedsnavn._text,
+            county: fylkesnavn,
+            municipality: kommunenavn,
         }
     } catch (error) {
-        return {
-            county: undefined,
-            municipality: undefined,
-        }
+        return {}
     }
 }
 
 async function searchByCoordinates({ latitude, longitude }, options) {
     const epsg = options && options.epsg
     try {
-        const [info, elevationInfo] = await Promise.all([
-            getInfo(latitude, longitude, epsg),
+        const [countyAndMunicipality, elevationInfo] = await Promise.all([
+            getCountyAndMunicipality(latitude, longitude, epsg),
             getAltitude(latitude, longitude, epsg),
         ])
 
         const { placename, elevation, stedsnummer } = elevationInfo
 
+        const coordinates = typeof elevation === 'undefined'
+            ? [longitude, latitude ]
+            : [longitude, latitude, elevation]
+
         return {
             type: "Feature",
             geometry: {
                 type: "Point",
-                coordinates: [longitude, latitude, Number(elevation)],
+                coordinates,
             },
             properties: {
-                ...info,
-                placeName2: placename,
+                ...countyAndMunicipality,
+                placeName: placename,
                 placeNumber: stedsnummer
             }
         }
@@ -93,36 +89,36 @@ async function searchByName(name, options) {
         const res = await fetch(`${SSR_HOST}?navn=${encodeURIComponent(name)}*&eksakteForst=true&antPerSide=15&epsgKode=${epsg}&side=0`)
         const data = await parseSsrResponse(res)
         const featuresWithoutAltitude = data
-            .slice(0, limit)
-            .map(place => ({
-                type: "Feature",
-                geometry: {
-                    type: "Point",
-                    coordinates: [Number(place.aust._text), Number(place.nord._text)],
-                },
-                properties: {
-                    placeNumber: place.ssrId._text,
-                    nameType: place.navnetype._text,
-                    county: place.fylkesnavn._text,
-                    municipality: place.kommunenavn._text,
-                    placeName: place.stedsnavn._text,
-                }
-            }))
+        .slice(0, limit)
+        .map(place => ({
+            type: "Feature",
+            geometry: {
+                type: "Point",
+                coordinates: [Number(place.aust._text), Number(place.nord._text)],
+            },
+            properties: {
+                placeNumber: place.ssrId._text,
+                nameType: place.navnetype._text,
+                county: place.fylkesnavn._text,
+                municipality: place.kommunenavn._text,
+                placeName: place.stedsnavn._text,
+            }
+        }))
 
         const features = await Promise.all(featuresWithoutAltitude.map(async feature => {
             const [lon, lat] = feature.geometry.coordinates
-            const { elevation, placename } = await getAltitude(lat, lon)
+            const { elevation } = await getAltitude(lat, lon)
+
+            const coordinates = typeof elevation === 'undefined'
+                ? [lon, lat]
+                : [lon, lat, elevation]
 
             return {
                 ...feature,
                 geometry: {
                     ...feature.geometry,
-                    coordinates: [lon, lat, Number(elevation)],
+                    coordinates,
                 },
-                properties: {
-                    ...feature.properties,
-                    placeName2: placename,
-                }
             }
         }))
 

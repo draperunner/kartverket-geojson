@@ -24,6 +24,7 @@ You can find the terms here: https://kartverket.no/data/Lisens/.
 Services used:
 * [Stedsnavn søketjeneste](https://kartkatalog.geonorge.no/metadata/kartverket/stedsnavn-soketjeneste/302b3664-fe67-4e04-a361-ded4f3589331)
 * [Kartverkets Elevation WPS](https://kartkatalog.geonorge.no/metadata/kartverket/kartverkets-elevation-wps/92299496-8836-4fc1-b685-6d14bd0eb749)
+* [Administrative inndelinger REST-API](https://ws.geonorge.no/kommuneinfo/v1/#)
 
 ## API
 
@@ -66,9 +67,7 @@ Example result:
     "properties": {
         "county": "Hordaland",
         "municipality": "Kvam",
-        "nameType": "Adressenavn (veg/gate)",
-        "placeName": "Hundsdalen",
-        "placeName2": "Nedre Norheim",
+        "placeName": "Nedre Norheim",
         "placeNumber": "1039346"
     }
 }
@@ -108,7 +107,8 @@ Example response:
                 "type": "Point",
                 "coordinates": [
                     10.7522583333333,
-                    59.9106666666667
+                    59.9106666666667,
+                    2.7
                 ]
             },
             "properties": {
@@ -116,7 +116,7 @@ Example response:
                 "nameType": "Stasjon",
                 "county": "Oslo",
                 "municipality": "Oslo",
-                "placeName2": "Oslo sentralstasjon"
+                "placeName": "Oslo sentralstasjon"
             }
         },
         {
@@ -125,7 +125,8 @@ Example response:
                 "type": "Point",
                 "coordinates": [
                     10.7547388888889,
-                    59.9128527777778
+                    59.9128527777778,
+                    4.2
                 ]
             },
             "properties": {
@@ -133,7 +134,7 @@ Example response:
                 "nameType": "Annen kulturdetalj",
                 "county": "Oslo",
                 "municipality": "Oslo",
-                "placeName2": "Oslo Spektrum"
+                "placeName": "Oslo Spektrum"
             }
         },
         {
@@ -142,7 +143,8 @@ Example response:
                 "type": "Point",
                 "coordinates": [
                     10.7522583333333,
-                    59.9106666666667
+                    59.9106666666667,
+                    2.7
                 ]
             },
             "properties": {
@@ -150,7 +152,7 @@ Example response:
                 "nameType": "Stasjon",
                 "county": "Oslo",
                 "municipality": "Oslo",
-                "placeName2": "Oslo sentralstasjon"
+                "placeName": "Oslo sentralstasjon"
             }
         },
         {
@@ -159,7 +161,8 @@ Example response:
                 "type": "Point",
                 "coordinates": [
                     10.7462555555556,
-                    59.9073805555556
+                    59.9073805555556,
+                    2
                 ]
             },
             "properties": {
@@ -167,7 +170,7 @@ Example response:
                 "nameType": "Annen kulturdetalj",
                 "county": "Oslo",
                 "municipality": "Oslo",
-                "placeName2": "Oslo Havnelager A/S"
+                "placeName": "Oslo Havnelager A/S"
             }
         },
         {
@@ -176,7 +179,8 @@ Example response:
                 "type": "Point",
                 "coordinates": [
                     10.7387416666667,
-                    59.90845
+                    59.90845,
+                    8.9
                 ]
             },
             "properties": {
@@ -184,7 +188,7 @@ Example response:
                 "nameType": "Annen kulturdetalj",
                 "county": "Oslo",
                 "municipality": "Oslo",
-                "placeName2": "Oslo Militære Samfund"
+                "placeName": "Oslo Militære Samfund"
             }
         }
     ]
