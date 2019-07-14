@@ -1,6 +1,6 @@
 {
   "name": "kartverket-geojson",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A set of tools for finding information about Norwegian places using services from Kartverket, returned on the GeoJSON format.",
   "main": "index.js",
   "scripts": {
