@@ -2,8 +2,13 @@
   "name": "kartverket-geojson",
   "version": "0.2.0",
   "description": "A set of tools for finding information about Norwegian places using services from Kartverket, returned on the GeoJSON format.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Mats Byrkjeland <matsbyr@gmail.com>",
@@ -12,5 +17,9 @@
     "node-fetch": "^2.6.0",
     "xml-js": "^1.6.11",
     "xml2json": "^0.11.2"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^2.5.7",
+    "typescript": "^4.0.2"
   }
 }
