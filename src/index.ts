@@ -1,18 +1,10 @@
 import { xml2json } from 'xml-js'
 import fetch, { Response } from 'node-fetch'
+import { Feature, Point, FeatureCollection } from 'geojson'
 
 const ELEVATION_HOST = 'https://wms.geonorge.no/skwms1/wps.elevation2'
 const SSR_HOST = 'https://ws.geonorge.no/SKWS3Index/v2/ssr/sok'
 const KOMMUNEINFO_HOST = 'https://ws.geonorge.no/kommuneinfo/v1'
-
-interface GeojsonPointFeature<T> {
-    type: "Feature",
-    geometry: {
-        type: "Point",
-        coordinates: [number, number] | [number, number, number],
-    },
-    properties: T
-}
 
 interface TextNode {
     _text: string
@@ -87,7 +79,18 @@ interface LatLon {
     longitude: number
 }
 
-export async function searchByCoordinates({ latitude, longitude }: LatLon, options?: { epsg: string }) {
+export type PlaceProps = {
+    placeNumber?: string | undefined,
+    nameType?: string | undefined,
+    county?: string | undefined,
+    municipality?: string | undefined,
+    placeName?: string | undefined,
+}
+
+export type PlaceFeature = Feature<Point, PlaceProps>
+export type PlaceFeatureCollection = FeatureCollection<Point, PlaceProps>
+
+export async function searchByCoordinates({ latitude, longitude }: LatLon, options?: { epsg: string }): Promise<PlaceFeature | null> {
     const epsg = options && options.epsg
     try {
         const [countyAndMunicipality, elevationInfo] = await Promise.all([
@@ -126,26 +129,13 @@ interface Options {
     epsg?: string
 }
 
-type Feature = GeojsonPointFeature<{
-    placeNumber: string,
-    nameType: string,
-    county: string,
-    municipality: string,
-    placeName: string,
-}>
-
-type FeatureCollection = {
-    type: "FeatureCollection"
-    features: Feature[]
-}
-
-export async function searchByName(name: string, options?: Options): Promise<FeatureCollection> {
+export async function searchByName(name: string, options?: Options): Promise<PlaceFeatureCollection> {
     const limit = options && typeof options.limit === 'number' ? options.limit : undefined
     const epsg = (options && options.epsg) || '4258'
     try {
         const res = await fetch(`${SSR_HOST}?navn=${encodeURIComponent(name)}*&eksakteForst=true&antPerSide=15&epsgKode=${epsg}&side=0`)
         const data = await parseSsrResponse(res)
-        const featuresWithoutAltitude: Feature[] = data
+        const featuresWithoutAltitude: PlaceFeature[] = data
         .slice(0, limit)
         .map((place: SsrPlace) => ({
             type: "Feature",
@@ -162,11 +152,11 @@ export async function searchByName(name: string, options?: Options): Promise<Fea
             }
         }))
 
-        const features: Feature[] = await Promise.all(featuresWithoutAltitude.map(async feature => {
+        const features: PlaceFeature[] = await Promise.all(featuresWithoutAltitude.map(async feature => {
             const [lon, lat] = feature.geometry.coordinates
             const { elevation } = await getAltitude(lat, lon)
 
-            const coordinates: [number, number] | [number, number, number] = typeof elevation === 'undefined'
+            const coordinates: Point['coordinates'] = typeof elevation === 'undefined'
                 ? [lon, lat]
                 : [lon, lat, elevation]
 
