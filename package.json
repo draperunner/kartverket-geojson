@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "format": "prettier src/index.ts --write",
-    "test": "prettier src/index.ts --check"
+    "test": "prettier src/index.ts --check",
+    "prepublish": "npm run build"
   },
   "author": "Mats Byrkjeland <matsbyr@gmail.com>",
   "license": "MIT",
