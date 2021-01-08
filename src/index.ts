@@ -90,7 +90,17 @@ export type PlaceProps = {
 export type PlaceFeature = Feature<Point, PlaceProps>
 export type PlaceFeatureCollection = FeatureCollection<Point, PlaceProps>
 
-export async function searchByCoordinates({ latitude, longitude }: LatLon, options?: { epsg: string }): Promise<PlaceFeature | null> {
+/**
+ * Call this with a set of coordinates and receive information about that geolocation.
+ * It uses the location closest to the specified coordinates
+ */
+export async function searchByCoordinates(
+    { latitude, longitude }: LatLon,
+    options?: {
+        /** The EPSG code for the coordinate system to use. Default is "4258". */
+        epsg: string
+    }
+): Promise<PlaceFeature | null> {
     const epsg = options && options.epsg
     try {
         const [countyAndMunicipality, elevationInfo] = await Promise.all([
@@ -125,10 +135,15 @@ export async function searchByCoordinates({ latitude, longitude }: LatLon, optio
 }
 
 interface Options {
+    /** The maximum number of results to fetch. Default value is nothing, which means it follows the APIs default value. */
     limit?: number,
+    /** The EPSG code for the coordinate system to use. Default is "4258". */
     epsg?: string
 }
 
+/**
+ * Search for locations with a given name.
+ */
 export async function searchByName(name: string, options?: Options): Promise<PlaceFeatureCollection> {
     const limit = options && typeof options.limit === 'number' ? options.limit : undefined
     const epsg = (options && options.epsg) || '4258'
