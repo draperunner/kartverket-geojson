@@ -15,6 +15,10 @@
   },
   "author": "Mats Byrkjeland <matsbyr@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/draperunner/kartverket-geojson.git"
+  },
   "dependencies": {
     "@types/geojson": "^7946.0.7",
     "node-fetch": "^2.6.0",
