@@ -9,6 +9,7 @@ npm install kartverket-geojson
 ```
 
 Import the functions you want
+
 ```
 const { searchByCoordinates, searchByName } = require('kartverket-geojson')
 // or
@@ -22,13 +23,15 @@ This library works by querying two XML REST services from Kartverket and combini
 You can find the terms here: https://kartverket.no/data/Lisens/.
 
 Services used:
-* [Stedsnavn søketjeneste](https://kartkatalog.geonorge.no/metadata/kartverket/stedsnavn-soketjeneste/302b3664-fe67-4e04-a361-ded4f3589331)
-* [Kartverkets Elevation WPS](https://kartkatalog.geonorge.no/metadata/kartverket/kartverkets-elevation-wps/92299496-8836-4fc1-b685-6d14bd0eb749)
-* [Administrative inndelinger REST-API](https://ws.geonorge.no/kommuneinfo/v1/#)
+
+- [Søketjeneste for stedsnavn](https://kartkatalog.geonorge.no/metadata/soeketjeneste-for-stedsnavn/d12de000-1a23-46b3-9192-3a1a98b2c994)
+- [Kartverkets Elevation WPS](https://kartkatalog.geonorge.no/metadata/kartverket/kartverkets-elevation-wps/92299496-8836-4fc1-b685-6d14bd0eb749)
+- [Administrative inndelinger REST-API](https://ws.geonorge.no/kommuneinfo/v1/#)
 
 ## API
 
 ### searchByCoordinates
+
 ```
 (coordinates: { latitude: number, longitude: number }) => Promise<GeoJSON Feature>
 ```
@@ -40,19 +43,22 @@ It uses the location closest to the specifed coordinates
 
 #### Parameters
 
-* `coordinates` (`object`): The coordinates object to search for
+- `coordinates` (`object`): The coordinates object to search for
   - `longitude` (`number`): The longitude
   - `latitude` (`number`): The latitude
-* `options` (`object`) [Optional]
+- `options` (`object`) [Optional]
   - `epsg` (`string`) [Optional]: The EPSG code for the coordinate system to use. Default is `"4258"`.
 
 #### Example
+
 Example call:
+
 ```
 searchByCoordinates({ latitude: 60.374357, longitude: 6.1492677 })
 ```
 
 Example result:
+
 ```
 {
     "type": "Feature",
@@ -74,6 +80,7 @@ Example result:
 ```
 
 ### searchByName
+
 ```
 (name: string, options?: { limit?: number }) => Promise<GeoJSON FeatureCollection>
 ```
@@ -84,113 +91,67 @@ Search for locations with a given name.
 
 #### Parameters
 
-* `name` (`string`): The name of the location you are searching for
-* `options` (`object`) [Optional]
-  - `limit` (`number`) [Optional]: The maximum number of results to fetch. Default value is nothing, which means it follows the APIs default value.
+- `name` (`string`): The name of the location you are searching for
+- `options` (`object`) [Optional]
+  - `limit` (`number`) [Optional]: The maximum number of results to fetch. Default value is 10.
   - `epsg` (`string`) [Optional]: The EPSG code for the coordinate system to use. Default is `"4258"`.
 
 ### Example
 
 Example call:
+
 ```js
-searchByName('Oslo S')
+searchByName("Oslo S");
 ```
 
 Example response:
+
 ```json
 {
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    10.7522583333333,
-                    59.9106666666667,
-                    2.7
-                ]
-            },
-            "properties": {
-                "placeNumber": "73693",
-                "nameType": "Stasjon",
-                "county": "Oslo",
-                "municipality": "Oslo",
-                "placeName": "Oslo sentralstasjon"
-            }
-        },
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    10.7547388888889,
-                    59.9128527777778,
-                    4.2
-                ]
-            },
-            "properties": {
-                "placeNumber": "394213",
-                "nameType": "Annen kulturdetalj",
-                "county": "Oslo",
-                "municipality": "Oslo",
-                "placeName": "Oslo Spektrum"
-            }
-        },
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    10.7522583333333,
-                    59.9106666666667,
-                    2.7
-                ]
-            },
-            "properties": {
-                "placeNumber": "73693",
-                "nameType": "Stasjon",
-                "county": "Oslo",
-                "municipality": "Oslo",
-                "placeName": "Oslo sentralstasjon"
-            }
-        },
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    10.7462555555556,
-                    59.9073805555556,
-                    2
-                ]
-            },
-            "properties": {
-                "placeNumber": "394209",
-                "nameType": "Annen kulturdetalj",
-                "county": "Oslo",
-                "municipality": "Oslo",
-                "placeName": "Oslo Havnelager A/S"
-            }
-        },
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    10.7387416666667,
-                    59.90845,
-                    8.9
-                ]
-            },
-            "properties": {
-                "placeNumber": "394229",
-                "nameType": "Annen kulturdetalj",
-                "county": "Oslo",
-                "municipality": "Oslo",
-                "placeName": "Oslo Militære Samfund"
-            }
-        }
-    ]
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [10.75226, 59.91067, 2.7]
+      },
+      "properties": {
+        "placeNumber": 369108,
+        "nameType": "Stasjon",
+        "county": "Oslo",
+        "municipality": "Oslo",
+        "placeName": "Oslo sentralstasjon"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [10.73353, 59.91187, 4.8]
+      },
+      "properties": {
+        "placeNumber": 509924,
+        "nameType": "Fylke",
+        "county": "Oslo",
+        "municipality": "Oslo",
+        "placeName": "Oslo fylke"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [10.74609, 59.91273, 10.5]
+      },
+      "properties": {
+        "placeNumber": 307915,
+        "nameType": "By",
+        "county": "Oslo",
+        "municipality": "Oslo",
+        "placeName": "Oslo"
+      }
+    }
+  ]
 }
 ```

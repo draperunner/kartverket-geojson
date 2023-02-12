@@ -1,30 +1,33 @@
 import { xml2json } from "xml-js";
-import fetch, { Response } from "node-fetch";
+import fetch from "node-fetch";
 import { Feature, Point, FeatureCollection } from "geojson";
 
 const ELEVATION_HOST = "https://wms.geonorge.no/skwms1/wps.elevation2";
-const SSR_HOST = "https://ws.geonorge.no/SKWS3Index/v2/ssr/sok";
+const SSR_HOST = "https://ws.geonorge.no/stedsnavn/v1";
 const KOMMUNEINFO_HOST = "https://ws.geonorge.no/kommuneinfo/v1";
 
-interface TextNode {
-  _text: string;
-}
-
 interface SsrPlace {
-  aust: TextNode;
-  nord: TextNode;
-  ssrId: TextNode;
-  navnetype: TextNode;
-  fylkesnavn: TextNode;
-  kommunenavn: TextNode;
-  stedsnavn: TextNode;
-}
-
-async function parseSsrResponse(response: Response) {
-  const xml = await response.text();
-  const json = JSON.parse(xml2json(xml, { compact: true, spaces: 0 }));
-  let data = json.sokRes.stedsnavn;
-  return data.length ? data : [data];
+  fylker: Array<{
+    fylkesnummer: string;
+    fylkesnavn: string;
+  }>;
+  kommuner: Array<{
+    kommunenummer: string;
+    kommunenavn: string;
+  }>;
+  navneobjekttype: string;
+  representasjonspunkt: {
+    øst: string;
+    nord: string;
+  };
+  stedsnavn: Array<{
+    skrivemåte: string;
+    skrivemåtestatus: string;
+    navnestatus: string;
+    språk: string;
+    stedsnavnnummer: number;
+  }>;
+  stedsnummer: string;
 }
 
 interface ElevationInfo {
@@ -153,10 +156,32 @@ export async function searchByCoordinates(
 }
 
 interface Options {
-  /** The maximum number of results to fetch. Default value is nothing, which means it follows the APIs default value. */
+  /** The maximum number of results to fetch. Default value is 10. */
   limit?: number;
   /** The EPSG code for the coordinate system to use. Default is "4258". */
   epsg?: string;
+}
+
+function getPreferredName(names: SsrPlace["stedsnavn"]): string {
+  if (names.length === 1) {
+    return names[0].skrivemåte;
+  }
+
+  const isHovednavn = (name: SsrPlace["stedsnavn"][0]) =>
+    name.navnestatus === "hovednavn";
+
+  return (
+    (
+      names.find(
+        (name) =>
+          isHovednavn(name) &&
+          name.skrivemåtestatus === "godkjent og prioritert"
+      ) ||
+      names.find(
+        (name) => isHovednavn(name) && name.skrivemåtestatus === "vedtatt"
+      )
+    )?.skrivemåte || "Ukjent"
+  );
 }
 
 /**
@@ -166,32 +191,41 @@ export async function searchByName(
   name: string,
   options?: Options
 ): Promise<PlaceFeatureCollection> {
-  const limit =
-    options && typeof options.limit === "number" ? options.limit : undefined;
+  const limit = typeof options?.limit === "number" ? options.limit : 10;
   const epsg = (options && options.epsg) || "4258";
   try {
-    const res = await fetch(
-      `${SSR_HOST}?navn=${encodeURIComponent(
-        name
-      )}*&eksakteForst=true&antPerSide=15&epsgKode=${epsg}&side=0`
-    );
-    const data = await parseSsrResponse(res);
-    const featuresWithoutAltitude: PlaceFeature[] = data
-      .slice(0, limit)
-      .map((place: SsrPlace) => ({
+    const urlParams = new URLSearchParams({
+      sok: name,
+      fuzzy: "true",
+      treffPerSide: "" + limit,
+      utkoordsys: epsg,
+      side: "1",
+      filtrer:
+        "navn.representasjonspunkt,navn.stedsnummer,navn.navneobjekttype,navn.fylker,navn.kommuner,navn.stedsnavn",
+    });
+
+    const res = await fetch(`${SSR_HOST}/sted?` + urlParams);
+    const data = await res.json();
+
+    const featuresWithoutAltitude: PlaceFeature[] = data.navn.map(
+      (place: SsrPlace) => ({
         type: "Feature",
         geometry: {
           type: "Point",
-          coordinates: [Number(place.aust._text), Number(place.nord._text)],
+          coordinates: [
+            Number(place.representasjonspunkt.øst),
+            Number(place.representasjonspunkt.nord),
+          ],
         },
         properties: {
-          placeNumber: place.ssrId._text,
-          nameType: place.navnetype._text,
-          county: place.fylkesnavn._text,
-          municipality: place.kommunenavn._text,
-          placeName: place.stedsnavn._text,
+          placeNumber: place.stedsnummer,
+          nameType: place.navneobjekttype,
+          county: place.fylker[0].fylkesnavn,
+          municipality: place.kommuner[0].kommunenavn,
+          placeName: getPreferredName(place.stedsnavn),
         },
-      }));
+      })
+    );
 
     const features: PlaceFeature[] = await Promise.all(
       featuresWithoutAltitude.map(async (feature) => {
