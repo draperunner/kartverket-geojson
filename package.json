@@ -21,9 +21,7 @@
   },
   "dependencies": {
     "@types/geojson": "^7946.0.7",
-    "node-fetch": "^2.6.0",
-    "xml-js": "^1.6.11",
-    "xml2json": "^0.12.0"
+    "node-fetch": "^2.6.0"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.5.7",

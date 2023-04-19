@@ -1,8 +1,7 @@
-import { xml2json } from "xml-js";
 import fetch from "node-fetch";
 import { Feature, Point, FeatureCollection } from "geojson";
 
-const ELEVATION_HOST = "https://wms.geonorge.no/skwms1/wps.elevation2";
+const ELEVATION_HOST = "https://ws.geonorge.no/hoydedata/v1";
 const SSR_HOST = "https://ws.geonorge.no/stedsnavn/v1";
 const KOMMUNEINFO_HOST = "https://ws.geonorge.no/kommuneinfo/v1";
 
@@ -30,43 +29,19 @@ interface SsrPlace {
   stedsnummer: string;
 }
 
-interface ElevationInfo {
-  elevation?: number;
-  stedsnummer?: string;
-  placename?: string;
-}
-
 async function getAltitude(
   lat: number,
   lon: number,
   epsg = "4258"
-): Promise<ElevationInfo> {
+): Promise<number | undefined> {
   try {
     const res = await fetch(
-      `${ELEVATION_HOST}?request=Execute&service=WPS&version=1.0.0&identifier=elevation&datainputs=lat=${lat};lon=${lon};epsg=${epsg}`
+      `${ELEVATION_HOST}/punkt?nord=${lat}&ost=${lon}&koordsys=${epsg}`
     );
-    const xml = await res.text();
-    const json = JSON.parse(xml2json(xml, { compact: true, spaces: 0 }));
-    const dataArray: [string, string] = json["wps:ExecuteResponse"][
-      "wps:ProcessOutputs"
-    ]["wps:Output"].map((d: any) => {
-      return [d["ows:Title"]._text, d["wps:Data"]["wps:LiteralData"]._text];
-    });
-
-    const dataObject: Record<string, unknown> = dataArray.reduce(
-      (obj, [key, value]) => ({
-        ...obj,
-        [key]: value === "None" ? undefined : value,
-      }),
-      {}
-    );
-
-    return {
-      ...dataObject,
-      elevation: Number(dataObject.elevation) || undefined,
-    };
+    const json = await res.json();
+    return json.punkter?.[0]?.z;
   } catch (error) {
-    return {};
+    return undefined;
   }
 }
 
@@ -84,7 +59,9 @@ async function getCountyAndMunicipality(
     const res = await fetch(
       `${KOMMUNEINFO_HOST}/punkt?nord=${lat}&ost=${lon}&koordsys=${epsg}`
     );
-    const { fylkesnavn, kommunenavn } = await res.json();
+    const data = await res.json();
+    const { fylkesnavn, kommunenavn } = data;
+
     return {
       county: fylkesnavn,
       municipality: kommunenavn,
@@ -92,6 +69,49 @@ async function getCountyAndMunicipality(
   } catch (error) {
     return null;
   }
+}
+
+function getPreferredName(names: SsrPlace["stedsnavn"]): string {
+  if (names.length === 1) {
+    return names[0].skrivemåte;
+  }
+
+  const isHovednavn = (name: SsrPlace["stedsnavn"][0]) =>
+    name.navnestatus === "hovednavn";
+
+  return (
+    (
+      names.find(
+        (name) =>
+          isHovednavn(name) &&
+          name.skrivemåtestatus === "godkjent og prioritert"
+      ) ||
+      names.find(
+        (name) => isHovednavn(name) && name.skrivemåtestatus === "vedtatt"
+      )
+    )?.skrivemåte || "Ukjent"
+  );
+}
+
+async function getPlaceNames(lat: number, lon: number, epsg = "4258") {
+  const res = await fetch(
+    `${SSR_HOST}/punkt?nord=${lat}&ost=${lon}&koordsys=${epsg}`
+  );
+
+  const data = await res.json();
+  const nearestPoint = data?.navn?.[0];
+
+  if (!nearestPoint) {
+    return undefined;
+  }
+
+  const placeNumber = nearestPoint.stedsnummer;
+  const placeName = getPreferredName(nearestPoint.stedsnavn);
+
+  return {
+    placeNumber,
+    placeName,
+  };
 }
 
 interface LatLon {
@@ -123,12 +143,11 @@ export async function searchByCoordinates(
 ): Promise<PlaceFeature | null> {
   const epsg = options && options.epsg;
   try {
-    const [countyAndMunicipality, elevationInfo] = await Promise.all([
+    const [countyAndMunicipality, elevation, placeNames] = await Promise.all([
       getCountyAndMunicipality(latitude, longitude, epsg),
       getAltitude(latitude, longitude, epsg),
+      getPlaceNames(latitude, longitude, epsg),
     ]);
-
-    const { placename, elevation, stedsnummer } = elevationInfo;
 
     const coordinates =
       typeof elevation === "undefined"
@@ -143,8 +162,7 @@ export async function searchByCoordinates(
       },
       properties: {
         ...countyAndMunicipality,
-        placeName: placename,
-        placeNumber: stedsnummer,
+        ...placeNames,
       },
     };
   } catch (error) {
@@ -160,28 +178,6 @@ interface Options {
   limit?: number;
   /** The EPSG code for the coordinate system to use. Default is "4258". */
   epsg?: string;
-}
-
-function getPreferredName(names: SsrPlace["stedsnavn"]): string {
-  if (names.length === 1) {
-    return names[0].skrivemåte;
-  }
-
-  const isHovednavn = (name: SsrPlace["stedsnavn"][0]) =>
-    name.navnestatus === "hovednavn";
-
-  return (
-    (
-      names.find(
-        (name) =>
-          isHovednavn(name) &&
-          name.skrivemåtestatus === "godkjent og prioritert"
-      ) ||
-      names.find(
-        (name) => isHovednavn(name) && name.skrivemåtestatus === "vedtatt"
-      )
-    )?.skrivemåte || "Ukjent"
-  );
 }
 
 /**
@@ -230,7 +226,7 @@ export async function searchByName(
     const features: PlaceFeature[] = await Promise.all(
       featuresWithoutAltitude.map(async (feature) => {
         const [lon, lat] = feature.geometry.coordinates;
-        const { elevation } = await getAltitude(lat, lon);
+        const elevation = await getAltitude(lat, lon);
 
         const coordinates: Point["coordinates"] =
           typeof elevation === "undefined" ? [lon, lat] : [lon, lat, elevation];

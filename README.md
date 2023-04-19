@@ -18,15 +18,15 @@ import { searchByCoordinates, searchByName } from 'kartverket-geojson'
 
 ## Licensing
 
-This library works by querying two XML REST services from Kartverket and combining the results into one GeoJSON result. If you are using this library, you need to accept the Kartverket's terms of use for these services.
+This library works by querying three REST services from Kartverket and combining the results into one GeoJSON result. If you are using this library, you need to accept the Kartverket's terms of use for these services.
 
 You can find the terms here: https://kartverket.no/data/Lisens/.
 
 Services used:
 
-- [Søketjeneste for stedsnavn](https://kartkatalog.geonorge.no/metadata/soeketjeneste-for-stedsnavn/d12de000-1a23-46b3-9192-3a1a98b2c994)
-- [Kartverkets Elevation WPS](https://kartkatalog.geonorge.no/metadata/kartverket/kartverkets-elevation-wps/92299496-8836-4fc1-b685-6d14bd0eb749)
-- [Administrative inndelinger REST-API](https://ws.geonorge.no/kommuneinfo/v1/#)
+- Place names: [Kartverkets åpne API for søk etter stedsnavn](https://ws.geonorge.no/stedsnavn/v1/)
+- Altitude: [Åpent API for høyde- og dybdedata fra Kartverket](https://ws.geonorge.no/hoydedata/v1/)
+- Counties and municipalities: [Åpent API fra Kartverket for administrative enheter](https://ws.geonorge.no/kommuneinfo/v1/)
 
 ## API
 
@@ -59,23 +59,19 @@ searchByCoordinates({ latitude: 60.374357, longitude: 6.1492677 })
 
 Example result:
 
-```
+```json
 {
-    "type": "Feature",
-    "geometry": {
-        "type": "Point",
-        "coordinates": [
-            6.1492677,
-            60.374357,
-            17.9
-        ]
-    },
-    "properties": {
-        "county": "Hordaland",
-        "municipality": "Kvam",
-        "placeName": "Nedre Norheim",
-        "placeNumber": "1039346"
-    }
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [6.1492677, 60.374357, 18.34]
+  },
+  "properties": {
+    "county": "Vestland",
+    "municipality": "Kvam",
+    "placeNumber": 1039346,
+    "placeName": "Nedre Norheim"
+  }
 }
 ```
 
